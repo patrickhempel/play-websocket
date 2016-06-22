@@ -1,7 +1,12 @@
 package controllers
 
 import javax.inject._
-import play.api._
+
+import actors.BitcoinTickerActor
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import play.api.libs.streams.ActorFlow
+import play.api.libs.ws.WSClient
 import play.api.mvc._
 
 /**
@@ -9,7 +14,7 @@ import play.api.mvc._
  * application's home page.
  */
 @Singleton
-class HomeController @Inject() extends Controller {
+class HomeController @Inject()(implicit system: ActorSystem, materializer: Materializer, ws: WSClient) extends Controller {
 
   /**
    * Create an Action to render an HTML page with a welcome message.
@@ -21,4 +26,7 @@ class HomeController @Inject() extends Controller {
     Ok(views.html.index("Your new application is ready."))
   }
 
+  def ticker = WebSocket.accept[String, String] { request =>
+    ActorFlow.actorRef(out => BitcoinTickerActor.props(out, ws))
+  }
 }
