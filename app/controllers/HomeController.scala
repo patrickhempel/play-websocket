@@ -23,7 +23,7 @@ class HomeController @Inject()(implicit system: ActorSystem, materializer: Mater
    * a path of `/`.
    */
   def index = Action {
-    Ok(views.html.index("Your new application is ready."))
+    Ok(views.html.index())
   }
 
   def ticker = WebSocket.accept[String, String] { request =>
