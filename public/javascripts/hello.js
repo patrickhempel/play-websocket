@@ -24,9 +24,17 @@ if (window.console) {
   }
 
   function onMessage(event) {
-    var data = JSON.parse( event.data);
-    console.log("tick");
-    document.getElementById("bid").innerHTML = data.kraken.rates.bid;
+    var response = JSON.parse( event.data);
+
+    switch(response.request) {
+        case "tick":
+            document.getElementById("bid").innerHTML = response.data.kraken.rates.bid;
+            break;
+        case "history":
+            console.log( response.data);
+            break;
+    }
+
   }
 
   window.addEventListener("load", init, false);
