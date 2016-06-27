@@ -6,6 +6,12 @@ $(document).ready( function($) {
 
     //Models
     var ExchangeUpdate = Backbone.Model.extend({});
+    var ExchangeHistory = Backbone.Model.extend({
+        defaults: {
+            type: 'ExchangeHistory',
+        },
+    });
+
     var WatchExchange = Backbone.Model.extend({
         defaults: {
             type: 'WatchExchange'
@@ -35,7 +41,7 @@ $(document).ready( function($) {
             //start listening on the vent
             vent.on('ExchangeUpdate', this.onExchangeUpdate, this);
             vent.on('UnwatchExchange', this.onUnwatchExchange, this);
-
+            vent.on('ExchangeHistory', this.onExchangeHistory, this);
         },
         template: "#chart",
         onExchangeUpdate: function( exchangeUpdate) {
@@ -46,7 +52,7 @@ $(document).ready( function($) {
                 //create new series
                 this.chart.addSeries({
                     id: exchangeUpdate.get('exchange'),
-                    name: exchangeUpdate.get('exchange'),
+                    name: exchangeUpdate.get('displayName'),
                     data: [
                         [exchangeUpdate.get('timestamp'),
                         exchangeUpdate.get('bid')]
@@ -69,11 +75,31 @@ $(document).ready( function($) {
                 series.remove(true);
             }
         },
+        onExchangeHistory: function( exchangeHistory) {
+            var series = this.chart.get( exchangeHistory.get('exchange'));
+
+            if( series === null) {
+                //create new series
+                this.chart.addSeries({
+                    id: exchangeHistory.get('exchange'),
+                    name: exchangeHistory.get('displayName'),
+                    data:
+                        _.map( exchangeHistory.get('history'), function( item) {
+                            return [
+                                item['timestamp'],
+                                item['bid']
+                            ];
+                        })
+
+                });
+              }
+        },
         onRender: function() {
             //setup chart
             this.chart = new Highcharts.Chart({
                 chart: {
-                    renderTo: 'chart'
+                    renderTo: 'chart',
+                    zoomType: 'x'
                 },
                 title: {
                     text: 'Bitcoin'
@@ -120,6 +146,10 @@ $(document).ready( function($) {
                 switch(response.type) {
                     case "ExchangeUpdate":
                         vent.trigger("ExchangeUpdate", new ExchangeUpdate( response));
+                    break;
+                    case "ExchangeHistory":
+                        var exchangeHistory = new ExchangeHistory( response);
+                        vent.trigger("ExchangeHistory", exchangeHistory);
                     break;
                 }
             };

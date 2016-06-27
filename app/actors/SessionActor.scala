@@ -5,13 +5,23 @@ import com.google.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import com.google.inject.name.Named
 import play.api.libs.concurrent.InjectedActorSupport
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json._
 
 /**
   * Created by patrickhempel on 24.06.16.
   */
 class SessionActor @Inject()(@Assisted out:ActorRef,
                              @Named("exchangesActor") exchangesActor: ActorRef) extends Actor {
+
+  implicit val ExchangeUpdateWrites = new Writes[ExchangeUpdate] {
+    def writes(exchangeUpdate: ExchangeUpdate) = Json.obj(
+      "type" -> "ExchangeUpdate",
+      "exchange" -> exchangeUpdate.exchange,
+      "displayName" -> exchangeUpdate.displayName,
+      "bid" -> exchangeUpdate.price.doubleValue(),
+      "timestamp" -> exchangeUpdate.timestamp
+    )
+  }
 
   override def preStart(): Unit = {
     super.preStart()
@@ -20,7 +30,7 @@ class SessionActor @Inject()(@Assisted out:ActorRef,
   }
 
   def configureDefaultExchanges(): Unit = {
-      val defaultExchanges = List("kraken", "bitstamp", "bitcoin_de")
+      val defaultExchanges = List("kraken", "bitstamp", "bitbay")
 
     for( exchange <- defaultExchanges) {
       exchangesActor ! WatchExchange( exchange)
@@ -29,12 +39,21 @@ class SessionActor @Inject()(@Assisted out:ActorRef,
 
 
   override def receive: Receive = {
-    case ExchangeUpdate( exchange, price, date) =>
+    case ExchangeUpdate( exchange, displayName, price, date) =>
       val message = Json.obj(
         "type" -> "ExchangeUpdate",
         "exchange" -> exchange,
+        "displayName" -> displayName,
         "bid" -> price.doubleValue(),
         "timestamp" -> date)
+      out ! message
+    case ExchangeHistory( exchange, displayName, history) =>
+      val message = Json.obj(
+        "type" -> "ExchangeHistory",
+        "exchange" -> exchange,
+        "displayName" -> displayName,
+        "history" -> history
+      )
       out ! message
     case json: JsValue =>
       val method = (json \ "type").as[String]
