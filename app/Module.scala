@@ -1,4 +1,6 @@
+import actors.{ExchangesActor, SessionActor, SessionParentActor}
 import com.google.inject.AbstractModule
+import play.api.libs.concurrent.AkkaGuiceSupport
 
 
 /**
@@ -11,9 +13,12 @@ import com.google.inject.AbstractModule
  * adding `play.modules.enabled` settings to the `application.conf`
  * configuration file.
  */
-class Module extends AbstractModule {
+class Module extends AbstractModule with AkkaGuiceSupport{
 
   override def configure() = {
+    bindActor[SessionParentActor]("sessionParentActor")
+    bindActor[ExchangesActor]("exchangesActor")
+    bindActorFactory[SessionActor, SessionActor.Factory]
   }
 
 }
