@@ -1,17 +1,21 @@
 package actors
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.event.LoggingReceive
 import com.google.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import com.google.inject.name.Named
 import play.api.libs.concurrent.InjectedActorSupport
 import play.api.libs.json._
+import play.api.libs.ws.WSClient
+
+import scala.collection.mutable.ListBuffer
 
 /**
   * Created by patrickhempel on 24.06.16.
   */
 class SessionActor @Inject()(@Assisted out:ActorRef,
-                             @Named("exchangesActor") exchangesActor: ActorRef) extends Actor {
+                             @Named("exchangesActor") exchangesActor: ActorRef, ws:WSClient) extends Actor with ActorLogging {
 
   implicit val ExchangeUpdateWrites = new Writes[ExchangeUpdate] {
     def writes(exchangeUpdate: ExchangeUpdate) = Json.obj(
@@ -23,14 +27,23 @@ class SessionActor @Inject()(@Assisted out:ActorRef,
     )
   }
 
+  //special actor fetching the available exchanges
+  val fetchListActor:ActorRef = context.actorOf( Props( new ListExchangesActor()(ws)), "fetchlist")
+
+  //holds all exchanges
+  var watchedExchanges = new ListBuffer[String]()
+
   override def preStart(): Unit = {
     super.preStart()
 
     configureDefaultExchanges()
+
+    fetchListActor ! FetchList
   }
 
   def configureDefaultExchanges(): Unit = {
-      val defaultExchanges = List("kraken", "bitstamp", "bitbay")
+    val defaultExchanges = List("kraken", "bitstamp", "bitbay")
+    watchedExchanges = watchedExchanges ++ defaultExchanges
 
     for( exchange <- defaultExchanges) {
       exchangesActor ! WatchExchange( exchange)
@@ -38,7 +51,7 @@ class SessionActor @Inject()(@Assisted out:ActorRef,
   }
 
 
-  override def receive: Receive = {
+  override def receive = LoggingReceive {
     case ExchangeUpdate( exchange, displayName, price, date) =>
       val message = Json.obj(
         "type" -> "ExchangeUpdate",
@@ -55,14 +68,20 @@ class SessionActor @Inject()(@Assisted out:ActorRef,
         "history" -> history
       )
       out ! message
+    case ExchangeList( list) =>
+      //mark all watched exchanges
+      list.filter( exc => watchedExchanges.contains( exc.name)).foreach( _.watched = true)
+      out ! Json.obj( "type" -> "ExchangeList", "exchanges" -> list)
     case json: JsValue =>
       val method = (json \ "type").as[String]
       method match {
         case "WatchExchange" =>
           val exchange = (json \ "exchange").as[String]
+          watchedExchanges += exchange
           exchangesActor ! WatchExchange( exchange)
         case "UnwatchExchange" =>
           val exchange = (json \ "exchange").as[String]
+          watchedExchanges -= exchange
           exchangesActor ! UnwatchExchange( Some(exchange))
       }
   }

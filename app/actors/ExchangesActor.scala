@@ -1,15 +1,16 @@
 package actors
 
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorLogging, Props}
+import akka.event.LoggingReceive
 import com.google.inject.Inject
 import play.api.libs.ws.WSClient
 
 /**
   * Created by patrickhempel on 24.06.16.
   */
-class ExchangesActor @Inject()(implicit ws:WSClient) extends Actor {
+class ExchangesActor @Inject()(implicit ws:WSClient) extends Actor with ActorLogging {
 
-  def receive = {
+  def receive = LoggingReceive {
     case watchExchange@WatchExchange(exchange) =>
       context.child(exchange).getOrElse {
         context.actorOf(Props( new ExchangeActor( exchange)), exchange)

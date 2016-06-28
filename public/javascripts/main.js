@@ -23,19 +23,26 @@ $(document).ready( function($) {
         }
     });
 
+    /** Collections **/
+    var ExchangeList = Backbone.Collection.extend({
 
-    //Views
+    });
+
+
+    /** VIEWS **/
     var RootView = Marionette.LayoutView.extend({
                 el: '#root',
                 template: '#rootTemplate',
                 regions: {
-                    chart: '#chart'
+                    chart: '#chart',
+                    subscribe: '#subscribe'
                 }
             });
 
     app.rootView = new RootView();
 
 
+    //ChartView
     var ChartView = Marionette.ItemView.extend({
         initialize: function() {
             //start listening on the vent
@@ -116,6 +123,63 @@ $(document).ready( function($) {
         }
     });
 
+    // Sub/Unsub View
+    var SubUnsubView = Backbone.Marionette.CollectionView.extend({
+        childView: Marionette.ItemView.extend({
+            tagName: 'li',
+            template: _.template("<label><input type='checkbox' value='<%= name %>' name='exchange' <%= watched ? checked='checked' : ''%>><%= displayName %></label>"),
+            ui: {
+                checkbox: 'input'
+            },
+            events: {
+                'click @ui.checkbox': 'onClick'
+            },
+            onClick: function() {
+                this.trigger("exchange:clicked", this.ui.checkbox.val());
+            }
+        }),
+        collection: new Backbone.Collection(),
+        tagName: "ul",
+        initialize: function() {
+            vent.on("ExchangeList", this.onExchangeList, this);
+        },
+        template: '#subunsubTemplate',
+        childEvents: {
+            'exchange:clicked': 'onClick'
+        },
+        onClick: function( childView, event) {
+            var value = childView.ui.checkbox.val();
+            var checked = childView.ui.checkbox.is(':checked');
+
+            if( checked) {
+                vent.trigger("WatchExchange", new WatchExchange({ exchange: value}));
+            } else {
+                vent.trigger("UnwatchExchange", new UnwatchExchange({ exchange: value}));
+            }
+
+        },
+//        ui: {
+//            input: 'input',
+//            form: 'form',
+//            radio: 'input[type="radio"]'
+//        },
+//        events: {
+//
+//            'submit @ui.form': 'onSubmit'
+//        },
+//        onSubmit: function( event) {
+//            event.preventDefault();
+//
+//            if(this.$el.find("input[type='radio']:checked").val() === 'subscribe') {
+//                vent.trigger("WatchExchange", new WatchExchange({ exchange: this.ui.input.val()}));
+//            } else {
+//                vent.trigger("UnwatchExchange", new UnwatchExchange({ exchange: this.ui.input.val()}));
+//            }
+//        },
+        onExchangeList: function( exchangeList) {
+            this.collection.add( exchangeList);
+        }
+    });
 
     /*
      Simple wrapper to hold a WebSocket
@@ -151,6 +215,10 @@ $(document).ready( function($) {
                         var exchangeHistory = new ExchangeHistory( response);
                         vent.trigger("ExchangeHistory", exchangeHistory);
                     break;
+                    case "ExchangeList":
+//                        var exchangeList = new ExchangeList( response.exchanges);
+                        vent.trigger("ExchangeList", response.exchanges);
+                    break;
                 }
             };
 
@@ -166,12 +234,14 @@ $(document).ready( function($) {
         app.rootView.render();
         Backbone.history.start();
 
+        app.rootView.getRegion("chart").show( new ChartView());
+        app.rootView.getRegion('subscribe').show( new SubUnsubView());
+
         var backendSocket = new BackendSocket();
         backendSocket.connect();
     });
 
     vent.on("SocketOpen", function() {
-        app.rootView.getRegion("chart").show( new ChartView());
     });
 
     app.start();

@@ -2,19 +2,20 @@ package actors
 
 import java.text.SimpleDateFormat
 
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import play.api.libs.ws.WSClient
 
-import scala.collection.immutable.{Queue, HashSet}
+import scala.collection.immutable.{HashSet, Queue}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-
 import java.util.Date
+
+import akka.event.LoggingReceive
 
 /**
   * Created by patrickhempel on 24.06.16.
   */
-class ExchangeActor(exchange:String)(implicit ws:WSClient) extends Actor {
+class ExchangeActor(exchange:String)(implicit ws:WSClient) extends Actor with ActorLogging {
   protected[this] var watchers: HashSet[ActorRef] = HashSet.empty[ActorRef]
 
   var maxQueueLenght:Int = 1000
@@ -29,7 +30,7 @@ class ExchangeActor(exchange:String)(implicit ws:WSClient) extends Actor {
 
   var exchangeHistory: Queue[ExchangeUpdate] = Queue[ExchangeUpdate]()
 
- def receive = {
+ def receive = LoggingReceive {
    case FetchLatest =>
      val url = "https://api.bitcoinaverage.com/exchanges/EUR"
      ws.url(url)
