@@ -35,7 +35,7 @@ class ListExchangesActor()(implicit ws:WSClient) extends Actor with ActorLogging
               }).toList
 
               context.parent ! ExchangeList(exchanges)
-              //this actor has successfully done his single purpose. kill it, shall we?
+              //this actor has successfully done its single purpose. stop it, shall we?
               context.stop(self)
             }
           }

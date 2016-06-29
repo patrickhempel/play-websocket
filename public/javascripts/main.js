@@ -126,20 +126,33 @@ $(document).ready( function($) {
     // Sub/Unsub View
     var SubUnsubView = Backbone.Marionette.CollectionView.extend({
         childView: Marionette.ItemView.extend({
-            tagName: 'li',
-            template: _.template("<label><input type='checkbox' value='<%= name %>' name='exchange' <%= watched ? checked='checked' : ''%>><%= displayName %></label>"),
+            tagName: 'a',
+            attributes: {
+                'href': '#'
+            },
+            className: function() {
+                var classes = ['list-group-item']
+
+                if( this.model.get('watched')) {
+                    classes.push( 'active');
+                }
+
+                return classes.join(' ');
+            },
+            template: _.template("<%= displayName %>"),
             ui: {
-                checkbox: 'input'
+                anchor: 'a'
             },
             events: {
-                'click @ui.checkbox': 'onClick'
+                'click': 'onClick'
             },
             onClick: function() {
-                this.trigger("exchange:clicked", this.ui.checkbox.val());
+                this.trigger("exchange:clicked");
             }
         }),
         collection: new Backbone.Collection(),
-        tagName: "ul",
+        tagName: "div",
+        className: "list-group",
         initialize: function() {
             vent.on("ExchangeList", this.onExchangeList, this);
         },
@@ -147,15 +160,17 @@ $(document).ready( function($) {
         childEvents: {
             'exchange:clicked': 'onClick'
         },
-        onClick: function( childView, event) {
-            var value = childView.ui.checkbox.val();
-            var checked = childView.ui.checkbox.is(':checked');
+        onClick: function( childView) {
+            var exchange = childView.model.get('name');
+            var checked = childView.$el.hasClass('active');
 
-            if( checked) {
-                vent.trigger("WatchExchange", new WatchExchange({ exchange: value}));
+            if( !checked) {
+                vent.trigger("WatchExchange", new WatchExchange({ exchange: exchange}));
             } else {
-                vent.trigger("UnwatchExchange", new UnwatchExchange({ exchange: value}));
+                vent.trigger("UnwatchExchange", new UnwatchExchange({ exchange: exchange}));
             }
+
+            childView.$el.toggleClass('active');
 
         },
 //        ui: {

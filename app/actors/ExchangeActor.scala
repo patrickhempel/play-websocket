@@ -39,7 +39,7 @@ class ExchangeActor(exchange:String)(implicit ws:WSClient) extends Actor with Ac
             response => response.status match {
               case 200 => {
                 val displayName = (response.json \ exchange \ "display_name").validate[String]
-                val price = (response.json \ exchange \ "rates" \ "bid").validate[Float]
+                val price = (response.json \ exchange \ "rates" \ "last").validate[Float]
                 val timestamp = (response.json \ "timestamp").validate[String]
                 lastResponse = ExchangeUpdate(
                   exchange,
