@@ -173,24 +173,6 @@ $(document).ready( function($) {
             childView.$el.toggleClass('active');
 
         },
-//        ui: {
-//            input: 'input',
-//            form: 'form',
-//            radio: 'input[type="radio"]'
-//        },
-//        events: {
-//
-//            'submit @ui.form': 'onSubmit'
-//        },
-//        onSubmit: function( event) {
-//            event.preventDefault();
-//
-//            if(this.$el.find("input[type='radio']:checked").val() === 'subscribe') {
-//                vent.trigger("WatchExchange", new WatchExchange({ exchange: this.ui.input.val()}));
-//            } else {
-//                vent.trigger("UnwatchExchange", new UnwatchExchange({ exchange: this.ui.input.val()}));
-//            }
-//        },
         onExchangeList: function( exchangeList) {
             this.collection.add( exchangeList);
         }
@@ -231,7 +213,6 @@ $(document).ready( function($) {
                         vent.trigger("ExchangeHistory", exchangeHistory);
                     break;
                     case "ExchangeList":
-//                        var exchangeList = new ExchangeList( response.exchanges);
                         vent.trigger("ExchangeList", response.exchanges);
                     break;
                 }
